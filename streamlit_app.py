@@ -21,7 +21,6 @@ DOWNLOAD_DIR = (
     else BASE_DIR / "downloads"
 )
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
-MAX_CLOUD_FILE_BYTES = 150 * 1024 * 1024
 DOWNLOAD_LOCK = threading.Lock()
 
 
@@ -111,8 +110,6 @@ def ydl_options() -> dict:
                 ffmpeg = str(candidates[-1])
     if ffmpeg:
         options["ffmpeg_location"] = str(Path(ffmpeg).parent)
-    if IS_CLOUD:
-        options["max_filesize"] = MAX_CLOUD_FILE_BYTES
     return options
 
 
@@ -191,11 +188,6 @@ def download_video(url: str, quality: str) -> Path:
     final_file = get_output_file(info or {})
     if not final_file:
         raise RuntimeError("Unduhan selesai tetapi file tidak ditemukan di folder downloads.")
-    if IS_CLOUD and final_file.stat().st_size > MAX_CLOUD_FILE_BYTES:
-        final_file.unlink(missing_ok=True)
-        raise RuntimeError(
-            "File melebihi batas 150 MB hosting Streamlit gratis. Coba resolusi lebih rendah atau jalankan aplikasi lokal."
-        )
     progress.progress(1.0)
     status.caption("Unduhan selesai.")
     return final_file
@@ -240,9 +232,13 @@ st.markdown(
       div[data-testid="stAlert"] {border-radius: 12px;}
       @media (max-width: 640px) {
         .block-container {padding-top: 1.4rem; padding-left: 1rem; padding-right: 1rem;}
-        h1 {font-size: 2.55rem;}
+        h1 {font-size: clamp(1.8rem, 8vw, 2.2rem); letter-spacing: -.045em; overflow-wrap: anywhere;}
         .hero-copy {font-size: .92rem;}
         div[data-testid="stVerticalBlockBorderWrapper"] {border-radius: 15px;}
+        div[data-testid="stHorizontalBlock"] {gap: .55rem;}
+        div[data-testid="stButton"] button {min-height: 3rem; padding-left: .5rem; padding-right: .5rem;}
+        .hero-badges span {flex: 1 1 auto; text-align: center;}
+        .cloud-note {font-size: .76rem;}
       }
     </style>
     """,
@@ -266,7 +262,7 @@ st.markdown('<div class="hero-badges"><span>Hingga 8K · 4320p</span><span>Maks.
 
 with st.container(border=True):
     st.markdown('<div class="section-heading"><span class="section-number">01</span><div><strong>Masukkan tautan video</strong><small>Tempel tautan YouTube atau youtu.be yang ingin diproses.</small></div></div>', unsafe_allow_html=True)
-    paste_col, url_col, clear_col = st.columns([1.15, 6.7, 1.25], vertical_alignment="bottom")
+    paste_col, clear_col = st.columns(2, gap="small")
     with paste_col:
         pasted = paste_link_button("Tempel", key="paste-video-link")
         if isinstance(pasted, dict):
@@ -284,16 +280,15 @@ with st.container(border=True):
                         st.session_state.clipboard_message = "Browser tidak memberi izin membaca clipboard. Gunakan Ctrl+V, atau tekan lama kolom tautan lalu pilih Tempel."
                     else:
                         st.session_state.clipboard_message = "Clipboard kosong atau tidak dapat dibaca. Tempelkan tautan langsung ke kolom."
-    with url_col:
-        st.text_input(
-            "Tautan video YouTube",
-            placeholder="https://www.youtube.com/watch?v=...",
-            key="video_url",
-            on_change=reset_info,
-            label_visibility="collapsed",
-        )
     with clear_col:
-        st.button("Hapus", use_container_width=True, on_click=clear_link, help="Kosongkan kolom tautan")
+        st.button("Hapus tautan", use_container_width=True, on_click=clear_link, help="Kosongkan kolom tautan")
+
+    st.text_input(
+        "Tautan video YouTube",
+        placeholder="https://www.youtube.com/watch?v=...",
+        key="video_url",
+        on_change=reset_info,
+    )
 
     if st.session_state.clipboard_message:
         st.caption(st.session_state.clipboard_message)
@@ -361,7 +356,14 @@ if info:
                 if status_box is not None:
                     status_box.update(label="Unduhan gagal.", state="error", expanded=True)
                 message = str(exc).strip()[:500] or "Terjadi kesalahan saat mengunduh."
-                if "ffmpeg" in message.lower():
+                lower_message = message.lower()
+                if "http error 403" in lower_message or ("403" in lower_message and "forbidden" in lower_message):
+                    message = (
+                        "YouTube menolak akses ke stream dari server Streamlit (HTTP 403). Ini bukan karena ponsel. "
+                        "Coba resolusi lebih rendah atau ulangi nanti. Jika tetap gagal, gunakan fitur unduh resmi "
+                        "YouTube atau jalankan aplikasi lokal; aplikasi ini tidak memakai login/cookies atau melewati pembatasan akses."
+                    )
+                elif "ffmpeg" in lower_message:
                     message += " Pastikan FFmpeg tersedia pada server."
                 st.error(message)
             finally:
@@ -388,7 +390,7 @@ if st.session_state.last_download_path:
                 os.startfile(str(DOWNLOAD_DIR))
 
 st.markdown(
-    '<div class="cloud-note"><span class="cloud-note-icon">ⓘ</span><span><strong>Batas hosting gratis:</strong> file diproses sementara dan dibatasi 150 MB. Unduhan 4K/8K berukuran besar mungkin perlu dijalankan dari aplikasi lokal.</span></div>',
+    '<div class="cloud-note"><span class="cloud-note-icon">ⓘ</span><span><strong>Catatan hosting gratis:</strong> tidak ada batas 150 MB buatan aplikasi. Ukuran maksimum mengikuti resource Streamlit yang tersedia; file 4K/8K sangat besar tetap bisa melebihi kapasitas server. File cloud bersifat sementara.</span></div>',
     unsafe_allow_html=True,
 )
 st.caption("Gunakan hanya konten yang kamu miliki atau memang berhak kamu unduh.")

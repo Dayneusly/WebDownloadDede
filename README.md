@@ -30,7 +30,9 @@ Repo GitHub ini publik, jadi kode sumber dan riwayat commit dapat dilihat siapa 
 
 ### Batas hosting gratis
 
-Streamlit Community Cloud memiliki sumber daya dan penyimpanan sementara yang terbatas. File video cloud dibatasi hingga 150 MB dan diunduh lewat browser ke perangkat pengunjung; hasil 4K/8K yang lebih besar perlu dijalankan lokal atau di hosting berbayar. File di hosting gratis bersifat sementara dan bisa hilang saat app dimulai ulang. Unduhan besar juga memakai memori server.
+Aplikasi tidak lagi memasang batas ukuran 150 MB. File diunduh lewat browser ke perangkat pengunjung dan disimpan sementara di server. Kapasitas sebenarnya tetap mengikuti batas memori, CPU, dan penyimpanan Streamlit Community Cloud yang dapat berubah; file 4K/8K besar masih mungkin gagal jika melebihi resource yang tersedia. Lihat [batas resource Community Cloud](https://docs.streamlit.io/deploy/streamlit-community-cloud/manage-your-app#app-resources-and-limits). Untuk unduhan besar dan stabil, jalankan aplikasi lokal atau gunakan hosting/VPS dengan kapasitas yang sesuai.
+
+Jika unduhan menampilkan **HTTP 403**, server YouTube menolak permintaan stream. Ini bukan karena ponsel; aplikasi memproses video dari server cloud. Coba resolusi lebih rendah atau gunakan fitur unduh resmi YouTube. Aplikasi tidak menggunakan login/cookies dan tidak melewati pembatasan akses. [Panduan yt-dlp tentang PO Token](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide) menjelaskan bahwa perubahan pemeriksaan YouTube dapat menyebabkan 403 pada format tertentu.
 
 ## Catatan penggunaan
 
