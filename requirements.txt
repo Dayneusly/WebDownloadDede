@@ -1,0 +1,3 @@
+Flask>=3.0,<4
+streamlit>=1.46,<2
+yt-dlp[default]>=2025.1
