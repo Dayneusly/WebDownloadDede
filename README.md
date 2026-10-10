@@ -26,7 +26,7 @@ Repo ini sudah memiliki dependensi cloud di `requirements.txt` dan `packages.txt
 2. Buat app dari repo `Dayneusly/WebDownloadDede`, branch `main`, entrypoint `streamlit_app.py`.
 3. Setelah proses deploy berhasil, ubah akses app menjadi **Public** bila ingin siapa pun yang memiliki URL dapat membukanya.
 
-Repo GitHub saat ini privat. Streamlit meminta izin GitHub tambahan untuk membaca repo privat; bila tidak ingin memberikan izin itu, repo harus dibuat publik dan kode sumbernya akan terlihat. Jangan mengunggah secret atau token ke repo.
+Repo GitHub ini publik, jadi kode sumber dan riwayat commit dapat dilihat siapa saja. App publik: https://webdownloaddede.streamlit.app/. Jangan mengunggah secret atau token ke repo.
 
 ### Batas hosting gratis
 
