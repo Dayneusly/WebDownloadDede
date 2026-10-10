@@ -215,12 +215,35 @@ st.set_page_config(page_title="WebDownloadDede", page_icon="⬇️", layout="cen
 st.markdown(
     """
     <style>
-      .block-container {max-width: 850px; padding-top: 2.6rem; padding-bottom: 3rem;}
-      h1 {letter-spacing: -0.04em;}
-      .hero-copy {color: #697586; font-size: 1.05rem;}
-      div.stButton > button {border-radius: 9px; min-height: 2.7rem; font-weight: 650;}
-      div[data-testid="stSelectbox"] div[data-baseweb="select"] {border-radius: 9px;}
-      .local-note {padding: .8rem 1rem; border: 1px solid #e1e7ef; border-radius: 10px; background: #f7f9fc; color: #647184;}
+      .block-container {max-width: 790px; padding-top: 2.2rem; padding-bottom: 3rem;}
+      h1 {margin: .6rem 0 .2rem; letter-spacing: -0.055em; font-size: clamp(2.4rem, 6vw, 3.35rem);}
+      .hero-kicker {display: inline-flex; align-items: center; gap: .5rem; padding: .38rem .7rem; border: 1px solid rgba(79,70,229,.16); border-radius: 999px; background: rgba(79,70,229,.07); color: var(--primary-color); font-size: .73rem; font-weight: 700; letter-spacing: .035em;}
+      .hero-dot {width: .43rem; height: .43rem; border-radius: 50%; background: #20a36a; box-shadow: 0 0 0 3px rgba(32,163,106,.12);}
+      .hero-copy {max-width: 620px; margin: .15rem 0 1rem; color: var(--text-color); opacity: .72; font-size: 1rem; line-height: 1.65;}
+      .hero-badges {display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1.35rem;}
+      .hero-badges span {padding: .35rem .62rem; border: 1px solid rgba(120,130,150,.16); border-radius: 999px; background: var(--secondary-background-color); color: var(--text-color); opacity: .82; font-size: .72rem; font-weight: 650;}
+      div[data-testid="stVerticalBlockBorderWrapper"] {border-radius: 18px; border-color: rgba(120,130,150,.2); box-shadow: 0 12px 34px rgba(31,41,55,.055);}
+      .section-heading {display: flex; align-items: center; gap: .75rem; margin: .05rem 0 1rem;}
+      .section-number {display: grid; width: 2.1rem; height: 2.1rem; flex: 0 0 2.1rem; place-items: center; border-radius: .7rem; background: rgba(79,70,229,.09); color: var(--primary-color); font-size: .8rem; font-weight: 800;}
+      .section-heading strong, .section-heading span:last-child {display: block;}
+      .section-heading strong {font-size: .98rem;}
+      .section-heading small {display: block; margin-top: .12rem; color: var(--text-color); opacity: .62; font-size: .78rem;}
+      div[data-testid="stTextInput"] input {min-height: 3rem; border-radius: 11px;}
+      div[data-testid="stSelectbox"] div[data-baseweb="select"] {min-height: 3rem; border-radius: 11px;}
+      div[data-testid="stButton"] button {min-height: 2.9rem; border-radius: 11px; font-weight: 700; transition: transform .15s ease, box-shadow .15s ease;}
+      div[data-testid="stButton"] button[kind="primary"] {box-shadow: 0 6px 16px rgba(79,70,229,.2);}
+      div[data-testid="stButton"] button:hover {transform: translateY(-1px);}
+      div[data-testid="stCheckbox"] label {font-size: .88rem;}
+      .cloud-note {display: flex; align-items: flex-start; gap: .7rem; margin-top: 1rem; padding: .85rem 1rem; border: 1px solid rgba(120,130,150,.17); border-radius: 12px; background: var(--secondary-background-color); color: var(--text-color); font-size: .8rem; line-height: 1.55; opacity: .84;}
+      .cloud-note-icon {font-size: 1rem; line-height: 1.4;}
+      .cloud-note strong {font-weight: 750;}
+      div[data-testid="stAlert"] {border-radius: 12px;}
+      @media (max-width: 640px) {
+        .block-container {padding-top: 1.4rem; padding-left: 1rem; padding-right: 1rem;}
+        h1 {font-size: 2.55rem;}
+        .hero-copy {font-size: .92rem;}
+        div[data-testid="stVerticalBlockBorderWrapper"] {border-radius: 15px;}
+      }
     </style>
     """,
     unsafe_allow_html=True,
@@ -236,51 +259,59 @@ for key, default in {
     if key not in st.session_state:
         st.session_state[key] = default
 
+st.markdown('<div class="hero-kicker"><span class="hero-dot"></span> PENGUNDUH VIDEO PRIBADI</div>', unsafe_allow_html=True)
 st.title("WebDownloadDede")
-st.markdown('<p class="hero-copy">Unduh video yang memang boleh kamu simpan, hingga 8K · 4320p60 jika tersedia dari sumber.</p>', unsafe_allow_html=True)
+st.markdown('<p class="hero-copy">Simpan video yang memang berhak kamu unduh. Tempel tautan, pilih kualitas, lalu mulai.</p>', unsafe_allow_html=True)
+st.markdown('<div class="hero-badges"><span>Hingga 8K · 4320p</span><span>Maks. 60 fps bila tersedia</span><span>Tanpa encode ulang</span></div>', unsafe_allow_html=True)
 
-paste_col, url_col, clear_col = st.columns([1.1, 7, 1.2], vertical_alignment="bottom")
-with paste_col:
-    pasted = paste_link_button("Tempel", key="paste-video-link")
-    if isinstance(pasted, dict):
-        event_id = str(pasted.get("id") or "")
-        if event_id and event_id != st.session_state.last_clipboard_event:
-            st.session_state.last_clipboard_event = event_id
-            value = str(pasted.get("text") or "").strip()
-            if value:
-                st.session_state.video_url = value
-                st.session_state.video_info = None
-                st.session_state.clipboard_message = "Tautan ditempel dari clipboard."
-            elif pasted.get("error"):
-                st.session_state.clipboard_message = str(pasted["error"])
-with url_col:
-    st.text_input(
-        "Tautan video YouTube",
-        placeholder="https://www.youtube.com/watch?v=...",
-        key="video_url",
-        on_change=reset_info,
+with st.container(border=True):
+    st.markdown('<div class="section-heading"><span class="section-number">01</span><div><strong>Masukkan tautan video</strong><small>Tempel tautan YouTube atau youtu.be yang ingin diproses.</small></div></div>', unsafe_allow_html=True)
+    paste_col, url_col, clear_col = st.columns([1.15, 6.7, 1.25], vertical_alignment="bottom")
+    with paste_col:
+        pasted = paste_link_button("Tempel", key="paste-video-link")
+        if isinstance(pasted, dict):
+            event_id = str(pasted.get("id") or "")
+            if event_id and event_id != st.session_state.last_clipboard_event:
+                st.session_state.last_clipboard_event = event_id
+                value = str(pasted.get("text") or "").strip()
+                if value:
+                    st.session_state.video_url = value
+                    st.session_state.video_info = None
+                    st.session_state.clipboard_message = "Tautan berhasil ditempel dari clipboard."
+                elif pasted.get("error"):
+                    clipboard_error = str(pasted["error"])
+                    if "clipboard" in clipboard_error.lower() or "permission denied" in clipboard_error.lower() or "notallowederror" in clipboard_error.lower():
+                        st.session_state.clipboard_message = "Browser tidak memberi izin membaca clipboard. Gunakan Ctrl+V, atau tekan lama kolom tautan lalu pilih Tempel."
+                    else:
+                        st.session_state.clipboard_message = "Clipboard kosong atau tidak dapat dibaca. Tempelkan tautan langsung ke kolom."
+    with url_col:
+        st.text_input(
+            "Tautan video YouTube",
+            placeholder="https://www.youtube.com/watch?v=...",
+            key="video_url",
+            on_change=reset_info,
+            label_visibility="collapsed",
+        )
+    with clear_col:
+        st.button("Hapus", use_container_width=True, on_click=clear_link, help="Kosongkan kolom tautan")
+
+    if st.session_state.clipboard_message:
+        st.caption(st.session_state.clipboard_message)
+
+    st.markdown('<div class="section-heading" style="margin-top:1.1rem"><span class="section-number">02</span><div><strong>Pilih kualitas</strong><small>Aplikasi memakai kualitas tertinggi yang tersedia dalam batas pilihanmu.</small></div></div>', unsafe_allow_html=True)
+    quality = st.selectbox(
+        "Resolusi maksimum",
+        options=list(QUALITY_PROFILES),
+        index=0,
+        format_func=lambda key: QUALITY_PROFILES[key]["label"],
+        help="Resolusi 8K60 hanya tersedia jika video sumber memang menyediakannya.",
+        label_visibility="collapsed",
     )
-with clear_col:
-    st.button("Hapus", use_container_width=True, on_click=clear_link, help="Kosongkan kolom tautan")
 
-if st.session_state.clipboard_message:
-    st.caption(st.session_state.clipboard_message)
-
-quality = st.selectbox(
-    "Resolusi maksimum",
-    options=list(QUALITY_PROFILES),
-    index=1,
-    format_func=lambda key: QUALITY_PROFILES[key]["label"],
-    help="Aplikasi memilih format tertinggi yang sesuai batas ini. Resolusi 8K60 hanya tersedia bila video sumber menyediakannya.",
-)
-
-st.checkbox(
-    "Saya memiliki hak atau izin untuk menyimpan video ini.",
-    key="rights_confirmed",
-)
-
-check_col, _ = st.columns([1.5, 3])
-with check_col:
+    st.checkbox(
+        "Saya memiliki hak atau izin untuk menyimpan video ini.",
+        key="rights_confirmed",
+    )
     check_video = st.button("Periksa video", type="primary", use_container_width=True)
 
 if check_video:
@@ -357,8 +388,9 @@ if st.session_state.last_download_path:
                 os.startfile(str(DOWNLOAD_DIR))
 
 st.markdown(
-    '<div class="local-note">Gunakan hanya konten yang kamu miliki atau berhak unduh. Pada hosting gratis, file diproses sementara dan dibatasi 150 MB; unduhan 4K/8K besar mungkin tidak tersedia.</div>',
+    '<div class="cloud-note"><span class="cloud-note-icon">ⓘ</span><span><strong>Batas hosting gratis:</strong> file diproses sementara dan dibatasi 150 MB. Unduhan 4K/8K berukuran besar mungkin perlu dijalankan dari aplikasi lokal.</span></div>',
     unsafe_allow_html=True,
 )
+st.caption("Gunakan hanya konten yang kamu miliki atau memang berhak kamu unduh.")
 
 
