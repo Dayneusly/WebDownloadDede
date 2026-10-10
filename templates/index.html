@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f8">
+  <title>WebDownloadDede — Pengunduh video lokal</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="WebDownloadDede">
+        <span class="brand-mark"><span></span><span></span><span></span></span>
+        <span>WebDownload<span class="brand-accent">Dede</span></span>
+      </a>
+      <div class="local-badge"><span class="pulse"></span> Berjalan di perangkat ini</div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="eyebrow"><span class="eyebrow-line"></span> VIDEO DOWNLOADER · PYTHON</div>
+        <h1>Video favorit,<br><span>resolusi maksimal.</span></h1>
+        <p class="hero-copy">Simpan video YouTube yang boleh kamu unduh. Pilih kualitas hingga <strong>8K · 4320p60</strong> bila tersedia dari sumber.</p>
+
+        <section class="download-card" aria-label="Form unduh video">
+          <div class="card-top">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v11m0 0 4-4m-4 4-4-4M4 17v3h16v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <h2>Mulai unduh</h2>
+              <p>Tempel tautan video YouTube di bawah.</p>
+            </div>
+            <span class="step-number">01</span>
+          </div>
+
+          <form id="download-form">
+            <label for="video-url">Tautan video</label>
+            <div class="url-input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 13.5a4.95 4.95 0 0 0 7.02 0l2.5-2.5a4.96 4.96 0 0 0-7.02-7.02l-1.44 1.44M14 10.5a4.95 4.95 0 0 0-7.02 0l-2.5 2.5a4.96 4.96 0 0 0 7.02 7.02l1.44-1.44" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              <input id="video-url" name="url" type="url" placeholder="https://www.youtube.com/watch?v=..." autocomplete="url" required>
+              <button id="paste-link" class="input-action" type="button" title="Tempel tautan dari clipboard">Tempel</button>
+              <button id="clear-link" class="input-clear" type="button" aria-label="Hapus tautan" title="Hapus tautan" hidden>×</button>
+            </div>
+
+            <div class="quality-row">
+              <div class="quality-label">
+                <label for="quality">Resolusi maksimum</label>
+                <span>Format yang benar-benar tersedia akan dipilih.</span>
+              </div>
+              <div class="select-wrap">
+                <select id="quality" name="quality">
+                  <option value="4320">4320p · 8K · sampai 60 fps</option>
+                  <option value="2160" selected>2160p · 4K · sampai 60 fps</option>
+                  <option value="1440">1440p · 2K · sampai 60 fps</option>
+                  <option value="1080">1080p · Full HD</option>
+                  <option value="720">720p · HD</option>
+                  <option value="best">Tertinggi tersedia · maks. 60 fps</option>
+                </select>
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </div>
+
+            <button id="main-button" class="primary-button" type="submit">
+              <span id="button-label">Periksa video</span>
+              <svg id="button-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h12m0 0-5-5m5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="button-spinner" aria-hidden="true"></span>
+            </button>
+          </form>
+
+          <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+          <section id="video-panel" class="video-panel" hidden>
+            <div class="video-summary">
+              <span class="video-play" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M7 4.8v10.4L15 10 7 4.8Z" fill="currentColor"/></svg></span>
+              <div class="video-text">
+                <div class="video-kicker">VIDEO TERDETEKSI</div>
+                <h3 id="video-title"></h3>
+                <p id="video-meta"></p>
+              </div>
+            </div>
+            <div class="formats-block">
+              <div class="formats-heading"><span>Resolusi sumber</span><span id="format-count"></span></div>
+              <div id="formats-list" class="formats-list"></div>
+            </div>
+          </section>
+
+          <section id="progress-panel" class="progress-panel" hidden>
+            <div class="progress-head">
+              <div><span class="progress-kicker">PROGRES UNDUHAN</span><strong id="progress-message">Menyiapkan…</strong></div>
+              <span id="progress-percent">0%</span>
+            </div>
+            <div class="progress-track"><span id="progress-fill"></span></div>
+            <div class="progress-foot"><span id="progress-speed"></span><span id="progress-eta"></span></div>
+          </section>
+
+          <a id="file-link" class="file-link" hidden>
+            <span class="file-link-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M10 2.5v10m0 0 3.5-3.5M10 12.5 6.5 9M3.5 14.5v2h13v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span><strong>Unduhan siap</strong><small>File disimpan di folder downloads</small></span>
+            <span class="file-link-action">Unduh ke komputer <span aria-hidden="true">↗</span></span>
+          </a>
+
+          <div class="card-note"><span class="shield">✓</span> Proses berjalan di komputer ini; koneksi unduh langsung ke YouTube.</div>
+        </section>
+
+        <div class="feature-row">
+          <div class="feature"><span class="feature-icon">8K</span><span><strong>Hingga 4320p60</strong><small>Jika tersedia dari sumber</small></span></div>
+          <div class="feature-divider"></div>
+          <div class="feature"><span class="feature-icon audio-icon">♫</span><span><strong>Audio ikut digabung</strong><small>File MKV menjaga kualitas</small></span></div>
+          <div class="feature-divider"></div>
+          <div class="feature"><span class="feature-icon lock-icon">⌂</span><span><strong>Privat di komputer</strong><small>Aplikasi berjalan lokal</small></span></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>WebDownloadDede <span class="footer-dot">·</span> aplikasi lokal</span>
+      <span>Gunakan hanya video yang kamu miliki atau berhak unduh.</span>
+    </footer>
+  </div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
+
+
+
+
