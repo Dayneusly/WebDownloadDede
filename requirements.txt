@@ -1,3 +1,4 @@
 Flask>=3.0,<4
-streamlit>=1.46,<2
-yt-dlp[default]>=2025.1
+streamlit>=1.50,<2
+yt-dlp[default]>=2025.11.12,<2027
+deno>=2.3,<3

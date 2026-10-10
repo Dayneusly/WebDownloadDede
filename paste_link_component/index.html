@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; font-family: sans-serif; }
+      button {
+        width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid #d6dce5;
+        border-radius: 9px; background: white; color: #253247; font-size: 14px;
+        font-weight: 650; cursor: pointer;
+      }
+      button:hover { border-color: #5f6b7a; }
+      button:focus-visible { outline: 2px solid #4c7cf3; outline-offset: 2px; }
+    </style>
+  </head>
+  <body>
+    <button id="paste" type="button">Tempel</button>
+    <script>
+      const button = document.getElementById("paste");
+      const send = (value) => window.parent.postMessage({
+        isStreamlitMessage: true,
+        type: "streamlit:setComponentValue",
+        value,
+      }, "*");
+
+      window.addEventListener("message", (event) => {
+        if (event.data?.type === "streamlit:render") {
+          const label = event.data.args?.label;
+          if (typeof label === "string") button.textContent = label;
+        }
+      });
+
+      button.addEventListener("click", async () => {
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        try {
+          if (!navigator.clipboard?.readText) {
+            throw new Error("Clipboard tidak tersedia. Tekan lama kolom tautan lalu pilih Tempel.");
+          }
+          const text = (await navigator.clipboard.readText()).trim();
+          if (!text) throw new Error("Clipboard kosong.");
+          send({ id, text });
+        } catch (error) {
+          send({ id, error: error?.message || "Clipboard tidak dapat dibaca." });
+        }
+      });
+
+      window.parent.postMessage({
+        isStreamlitMessage: true,
+        type: "streamlit:componentReady",
+        apiVersion: 1,
+      }, "*");
+      window.parent.postMessage({
+        isStreamlitMessage: true,
+        type: "streamlit:setFrameHeight",
+        height: 46,
+      }, "*");
+    </script>
+  </body>
+</html>

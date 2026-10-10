@@ -1,18 +1,43 @@
 from __future__ import annotations
 
+import tempfile
 import os
 import shutil
-import subprocess
+import threading
+import time
 import uuid
 from pathlib import Path
 from urllib.parse import urlparse
 
 import streamlit as st
 from yt_dlp import YoutubeDL
+from paste_link_component import paste_link_button
 
 BASE_DIR = Path(__file__).resolve().parent
-DOWNLOAD_DIR = BASE_DIR / "downloads"
+IS_CLOUD = os.name != "nt"
+DOWNLOAD_DIR = (
+    Path(tempfile.gettempdir()) / "webdownloaddede-downloads"
+    if IS_CLOUD
+    else BASE_DIR / "downloads"
+)
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+MAX_CLOUD_FILE_BYTES = 150 * 1024 * 1024
+DOWNLOAD_LOCK = threading.Lock()
+
+
+def cleanup_cloud_downloads() -> None:
+    if not IS_CLOUD:
+        return
+    cutoff = time.time() - (6 * 60 * 60)
+    for path in DOWNLOAD_DIR.iterdir():
+        try:
+            if path.is_file() and path.stat().st_mtime < cutoff:
+                path.unlink()
+        except OSError:
+            continue
+
+
+cleanup_cloud_downloads()
 
 QUALITY_PROFILES = {
     "4320": {
@@ -86,6 +111,8 @@ def ydl_options() -> dict:
                 ffmpeg = str(candidates[-1])
     if ffmpeg:
         options["ffmpeg_location"] = str(Path(ffmpeg).parent)
+    if IS_CLOUD:
+        options["max_filesize"] = MAX_CLOUD_FILE_BYTES
     return options
 
 
@@ -164,31 +191,14 @@ def download_video(url: str, quality: str) -> Path:
     final_file = get_output_file(info or {})
     if not final_file:
         raise RuntimeError("Unduhan selesai tetapi file tidak ditemukan di folder downloads.")
+    if IS_CLOUD and final_file.stat().st_size > MAX_CLOUD_FILE_BYTES:
+        final_file.unlink(missing_ok=True)
+        raise RuntimeError(
+            "File melebihi batas 150 MB hosting Streamlit gratis. Coba resolusi lebih rendah atau jalankan aplikasi lokal."
+        )
     progress.progress(1.0)
     status.caption("Unduhan selesai.")
     return final_file
-
-
-def paste_from_clipboard() -> None:
-    try:
-        if os.name != "nt":
-            raise RuntimeError("Tombol clipboard tersedia saat aplikasi berjalan lokal di Windows. Gunakan Ctrl+V.")
-        result = subprocess.run(
-            ["powershell.exe", "-NoProfile", "-STA", "-Command", "Get-Clipboard -Raw"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=5,
-            check=True,
-        )
-        value = result.stdout.strip()
-        if not value:
-            raise RuntimeError("Clipboard kosong.")
-        st.session_state.video_url = value
-        st.session_state.video_info = None
-        st.session_state.clipboard_message = "Tautan ditempel dari clipboard."
-    except Exception as exc:
-        st.session_state.clipboard_message = str(exc) or "Clipboard tidak dapat dibaca."
 
 
 def clear_link() -> None:
@@ -221,6 +231,7 @@ for key, default in {
     "video_info": None,
     "clipboard_message": "",
     "last_download_path": "",
+    "last_clipboard_event": "",
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
@@ -230,7 +241,18 @@ st.markdown('<p class="hero-copy">Unduh video yang memang boleh kamu simpan, hin
 
 paste_col, url_col, clear_col = st.columns([1.1, 7, 1.2], vertical_alignment="bottom")
 with paste_col:
-    st.button("Tempel", use_container_width=True, on_click=paste_from_clipboard, help="Tempel tautan dari clipboard")
+    pasted = paste_link_button("Tempel", key="paste-video-link")
+    if isinstance(pasted, dict):
+        event_id = str(pasted.get("id") or "")
+        if event_id and event_id != st.session_state.last_clipboard_event:
+            st.session_state.last_clipboard_event = event_id
+            value = str(pasted.get("text") or "").strip()
+            if value:
+                st.session_state.video_url = value
+                st.session_state.video_info = None
+                st.session_state.clipboard_message = "Tautan ditempel dari clipboard."
+            elif pasted.get("error"):
+                st.session_state.clipboard_message = str(pasted["error"])
 with url_col:
     st.text_input(
         "Tautan video YouTube",
@@ -250,6 +272,11 @@ quality = st.selectbox(
     index=1,
     format_func=lambda key: QUALITY_PROFILES[key]["label"],
     help="Aplikasi memilih format tertinggi yang sesuai batas ini. Resolusi 8K60 hanya tersedia bila video sumber menyediakannya.",
+)
+
+st.checkbox(
+    "Saya memiliki hak atau izin untuk menyimpan video ini.",
+    key="rights_confirmed",
 )
 
 check_col, _ = st.columns([1.5, 3])
@@ -287,29 +314,50 @@ if info:
         st.caption("Format akan dipilih saat unduhan dimulai.")
 
     if st.button("Mulai unduh", type="primary", use_container_width=True):
-        try:
-            url = validate_youtube_url(st.session_state.video_url)
-            with st.status("Menyiapkan unduhan…", expanded=True) as status_box:
-                final_file = download_video(url, quality)
-                status_box.update(label="Unduhan selesai.", state="complete", expanded=False)
-            st.session_state.last_download_path = str(final_file)
-        except Exception as exc:
-            status_box.update(label="Unduhan gagal.", state="error", expanded=True)
-            message = str(exc).strip()[:500] or "Terjadi kesalahan saat mengunduh."
-            if "ffmpeg" in message.lower():
-                message += " Pastikan FFmpeg terpasang."
-            st.error(message)
+        if not st.session_state.rights_confirmed:
+            st.error("Konfirmasikan bahwa Anda berhak menyimpan video ini sebelum mengunduh.")
+        elif not DOWNLOAD_LOCK.acquire(blocking=False):
+            st.error("Server gratis sedang memproses unduhan lain. Silakan coba beberapa saat lagi.")
+        else:
+            status_box = None
+            try:
+                url = validate_youtube_url(st.session_state.video_url)
+                with st.status("Menyiapkan unduhan…", expanded=True) as status_box:
+                    final_file = download_video(url, quality)
+                    status_box.update(label="Unduhan selesai.", state="complete", expanded=False)
+                st.session_state.last_download_path = str(final_file)
+            except Exception as exc:
+                if status_box is not None:
+                    status_box.update(label="Unduhan gagal.", state="error", expanded=True)
+                message = str(exc).strip()[:500] or "Terjadi kesalahan saat mengunduh."
+                if "ffmpeg" in message.lower():
+                    message += " Pastikan FFmpeg tersedia pada server."
+                st.error(message)
+            finally:
+                DOWNLOAD_LOCK.release()
 
 if st.session_state.last_download_path:
     last_file = Path(st.session_state.last_download_path)
     if last_file.is_file():
-        st.success("Unduhan tersimpan: " + last_file.name)
-        st.caption(str(last_file))
-        if os.name == "nt" and st.button("Buka folder unduhan"):
-            os.startfile(str(DOWNLOAD_DIR))
+        file_size = last_file.stat().st_size
+        st.success("File siap diunduh: " + last_file.name)
+        st.download_button(
+            "Simpan video ke perangkat ini",
+            data=lambda path=last_file: path.open("rb"),
+            file_name=last_file.name,
+            mime="video/x-matroska",
+            type="primary",
+            use_container_width=True,
+        )
+        if IS_CLOUD:
+            st.caption(f"Ukuran file: {file_size / (1024 * 1024):.1f} MB · file disimpan sementara di server.")
+        else:
+            st.caption(str(last_file))
+            if os.name == "nt" and st.button("Buka folder unduhan"):
+                os.startfile(str(DOWNLOAD_DIR))
 
 st.markdown(
-    '<div class="local-note">Aplikasi berjalan lokal. Gunakan hanya konten yang kamu miliki atau berhak unduh; file tersimpan di folder downloads.</div>',
+    '<div class="local-note">Gunakan hanya konten yang kamu miliki atau berhak unduh. Pada hosting gratis, file diproses sementara dan dibatasi 150 MB; unduhan 4K/8K besar mungkin tidak tersedia.</div>',
     unsafe_allow_html=True,
 )
 
